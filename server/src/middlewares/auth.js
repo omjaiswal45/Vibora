@@ -15,30 +15,27 @@ const adminAuth = (req, res, next) =>{
 };
 
 // user Auth....................................
-const userAuth = async (req, res, next) =>{
-try {
-  //findout the token from res
-  const{token} = req.cookies;
-  if(!token){
-    throw new Error("token is not valid!!!")
+const userAuth = async (req, res, next) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      return res.status(401).json({ message: "Authentication token missing" });
+    }
+
+    const decoded = jwt.verify(token, "Jassu@123al");
+    const user = await User.findById(decoded._id);
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({ message: "User not found or inactive" });
+    }
+
+    req.user = user;
+    next();
+  } catch (err) {
+    console.error("Auth middleware error:", err.message);
+    res.status(401).json({ message: "Invalid token" });
   }
-  //validate the token------------------
-  const decodeObj = await jwt.verify(token, "Jassu@123al")
-  const {_id} = decodeObj;
-  //find out the user from database-------------
-  const user = await User.findById(_id);
-  if(!user){
-    throw new Error("user not found")
-  }
-  req.user = user;
-  next();
-} catch (err) {
-  res.status(400).send("ERROR: " + err.message)
-  
-}
 };
-
-
 module.exports ={
   adminAuth,
   userAuth,
