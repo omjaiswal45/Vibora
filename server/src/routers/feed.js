@@ -32,7 +32,7 @@ feedRouter.get("/feed", userAuth, async (req, res) => {
     const feedUserIds = [...friendIds, loggedInUser._id];
 
     // Get posts from friends and own posts
-    const posts = await Post.find({ 
+    let posts = await Post.find({ 
       userId: { $in: feedUserIds }, 
       isActive: true 
     })
@@ -43,6 +43,20 @@ feedRouter.get("/feed", userAuth, async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+
+    // If no posts from connections, show some recent public posts
+    if (posts.length === 0 && page === 1) {
+      posts = await Post.find({ 
+        isActive: true,
+        userId: { $ne: loggedInUser._id } // Exclude own posts to avoid duplicates
+      })
+        .populate('userId', 'firstName lastName')
+        .populate('taggedUsers', 'firstName lastName')
+        .populate('likes.userId', 'firstName lastName')
+        .populate('comments.userId', 'firstName lastName')
+        .sort({ createdAt: -1 })
+        .limit(limit);
+    }
 
     const totalPosts = await Post.countDocuments({ 
       userId: { $in: feedUserIds }, 
@@ -188,6 +202,85 @@ feedRouter.get("/feed/users/search", userAuth, async (req, res) => {
         limit,
         total: totalUsers,
         pages: Math.ceil(totalUsers / limit)
+      }
+    });
+    
+  } catch (err) {
+    res.status(400).send("ERROR: " + err.message);
+  }
+});
+
+// Get friend suggestions (users not connected yet)
+feedRouter.get("/feed/users/suggestions", userAuth, async (req, res) => {
+  try {
+    const loggedInUser = req.user;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
+
+    // Get existing connection request user IDs to exclude from suggestions
+    const existingConnections = await ConnectionRequest.find({
+      $or: [
+        { fromUserId: loggedInUser._id },
+        { toUserId: loggedInUser._id }
+      ]
+    });
+
+    const excludeUserIds = existingConnections.map(conn => 
+      conn.fromUserId.equals(loggedInUser._id) ? conn.toUserId : conn.fromUserId
+    );
+
+    // Also exclude the logged-in user
+    excludeUserIds.push(loggedInUser._id);
+
+    // Get users who are not connected yet
+    const users = await User.find({
+      _id: { $nin: excludeUserIds }
+    })
+      .select('firstName lastName emailId age gender about')
+      .skip(skip)
+      .limit(limit);
+
+    const totalUsers = await User.countDocuments({
+      _id: { $nin: excludeUserIds }
+    });
+
+    res.json({
+      message: "Friend suggestions retrieved successfully",
+      data: users,
+      pagination: {
+        page,
+        limit,
+        total: totalUsers,
+        pages: Math.ceil(totalUsers / limit)
+      }
+    });
+    
+  } catch (err) {
+    res.status(400).send("ERROR: " + err.message);
+  }
+});
+
+// Debug route to get all posts (for testing)
+feedRouter.get("/feed/debug/all", userAuth, async (req, res) => {
+  try {
+    const posts = await Post.find({ isActive: true })
+      .populate('userId', 'firstName lastName')
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    const totalPosts = await Post.countDocuments({ isActive: true });
+    const totalUsers = await User.countDocuments({});
+    const totalConnections = await ConnectionRequest.countDocuments({});
+
+    res.json({
+      message: "Debug info retrieved",
+      data: {
+        posts: posts.length,
+        totalPosts,
+        totalUsers,
+        totalConnections,
+        samplePosts: posts
       }
     });
     
