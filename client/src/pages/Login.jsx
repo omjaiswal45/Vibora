@@ -7,8 +7,8 @@ import { addUser } from "../features/auth/authSlice";
 
 
 const Login = () => {
-  const [emailId, setEmailId] = useState("sheetal12@gmail.com");
-  const [password, setPassword] = useState("Sheetal@123al");
+  const [emailId, setEmailId] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const dispatch = useDispatch();
