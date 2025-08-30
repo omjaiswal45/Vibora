@@ -1,0 +1,192 @@
+@import "tailwindcss";
+
+/* Hide all scrollbars completely */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Ensure no scrollbars are visible anywhere */
+html, body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar, 
+body::-webkit-scrollbar {
+  display: none;
+}
+
+/* Utility class for hiding scrollbars */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Hide scrollbars for sidebar */
+.sidebar-container::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar-container {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Hide scrollbars for navigation section */
+.sidebar-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar-nav {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Responsive utilities */
+.responsive-text {
+  @apply text-sm lg:text-base;
+}
+
+.responsive-text-lg {
+  @apply text-base lg:text-lg;
+}
+
+.responsive-text-xl {
+  @apply text-lg lg:text-xl;
+}
+
+.responsive-text-2xl {
+  @apply text-xl lg:text-2xl;
+}
+
+.responsive-text-3xl {
+  @apply text-2xl lg:text-3xl;
+}
+
+.responsive-padding {
+  @apply p-3 lg:p-4;
+}
+
+.responsive-padding-lg {
+  @apply p-4 lg:p-6;
+}
+
+.responsive-padding-xl {
+  @apply p-6 lg:p-8;
+}
+
+.responsive-margin {
+  @apply m-3 lg:m-4;
+}
+
+.responsive-margin-lg {
+  @apply m-4 lg:m-6;
+}
+
+.responsive-margin-xl {
+  @apply m-6 lg:m-8;
+}
+
+.responsive-space {
+  @apply space-y-3 lg:space-y-4;
+}
+
+.responsive-space-lg {
+  @apply space-y-4 lg:space-y-6;
+}
+
+.responsive-space-xl {
+  @apply space-y-6 lg:space-y-8;
+}
+
+/* Consistent color scheme variables */
+:root {
+  --primary-gradient: linear-gradient(to right, #8b5cf6, #ec4899);
+  --secondary-gradient: linear-gradient(to right, #ec4899, #f97316);
+  --accent-gradient: linear-gradient(to right, #f97316, #ef4444);
+  --background-gradient: linear-gradient(to bottom right, #faf5ff, #fdf2f8, #fff7ed);
+  --card-background: rgba(255, 255, 255, 0.8);
+  --border-color: #e5e7eb;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --text-accent: #8b5cf6;
+}
+
+/* Mobile-first responsive breakpoints */
+@media (max-width: 640px) {
+  .mobile-hidden {
+    display: none;
+  }
+  
+  .mobile-full {
+    width: 100%;
+  }
+  
+  .mobile-stack {
+    flex-direction: column;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tablet-hidden {
+    display: none;
+  }
+  
+  .tablet-half {
+    width: 50%;
+  }
+}
+
+@media (min-width: 1025px) {
+  .desktop-hidden {
+    display: none;
+  }
+  
+  .desktop-auto {
+    width: auto;
+  }
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Focus states for accessibility */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+}
+
+/* Custom scrollbar for webkit browsers (optional) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #8b5cf6, #ec4899);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #7c3aed, #db2777);
+}
