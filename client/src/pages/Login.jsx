@@ -22,7 +22,12 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const res = await axiosInstance.post("/login", { emailId, password });
+    const res = await axiosInstance.post(
+  "/login",
+  { emailId, password },
+  { withCredentials: true } 
+);
+
       console.log("Login Response:", res.data);
       dispatch(addUser(res.data));
       toast.success("Logged in successfully!");
