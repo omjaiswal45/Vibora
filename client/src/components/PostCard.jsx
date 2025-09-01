@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import Button from "./common/Button";
 import axiosInstance from "../api/axiosInstance";
@@ -14,10 +14,23 @@ function PostCard({ post, onDelete, onUpdate, onLike, onComment }) {
   const [showOptions, setShowOptions] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [editContent, setEditContent] = useState(post.content);
-  
+  const [localComments, setLocalComments] = useState(post.comments || []);
+
   const currentUser = useSelector((state) => state.auth.user);
   const isOwnPost = currentUser?._id === post.userId?._id;
-  const isLiked = post.likes?.some(like => like.userId === currentUser?._id);
+  const isLiked = post.likes?.some(
+    (like) => like.userId?.toString() === currentUser?._id
+  );
+
+  // Sync edit content when post.content updates
+  useEffect(() => {
+    setEditContent(post.content);
+  }, [post.content]);
+
+  // Sync comments if parent updates
+  useEffect(() => {
+    setLocalComments(post.comments || []);
+  }, [post.comments]);
 
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
@@ -37,10 +50,11 @@ function PostCard({ post, onDelete, onUpdate, onLike, onComment }) {
     if (!editContent.trim()) return;
     setLoading(true);
     try {
-      const response = await axiosInstance.patch(`/post/edit/${post._id}`, {
-        content: editContent
-      }, { withCredentials: true });
-      
+      const response = await axiosInstance.patch(
+        `/post/edit/${post._id}`,
+        { content: editContent },
+        { withCredentials: true }
+      );
       toast.success("Post updated successfully!");
       onUpdate && onUpdate(response.data.data);
       setEditMode(false);
@@ -54,7 +68,11 @@ function PostCard({ post, onDelete, onUpdate, onLike, onComment }) {
   const handleLike = async () => {
     setLikeLoading(true);
     try {
-      const response = await axiosInstance.post(`/post/like/${post._id}`, {}, { withCredentials: true });
+      const response = await axiosInstance.post(
+        `/post/like/${post._id}`,
+        {},
+        { withCredentials: true }
+      );
       onLike && onLike(post._id, response.data.liked);
       toast.success(response.data.liked ? "Post liked!" : "Post unliked!");
     } catch (e) {
@@ -68,13 +86,16 @@ function PostCard({ post, onDelete, onUpdate, onLike, onComment }) {
     if (!newComment.trim()) return;
     setCommentLoading(true);
     try {
-      const response = await axiosInstance.post(`/post/comment/${post._id}`, {
-        comment: newComment
-      }, { withCredentials: true });
-      
-      onComment && onComment(post._id, response.data.data);
+      const response = await axiosInstance.post(
+        `/post/comment/${post._id}`,
+        { comment: newComment },
+        { withCredentials: true }
+      );
+      // Update local comments immediately
+      setLocalComments((prev) => [...prev, response.data.data]);
       setNewComment("");
       toast.success("Comment added!");
+      onComment && onComment(post._id, response.data.data);
     } catch (e) {
       toast.error(e?.response?.data || "Failed to add comment");
     } finally {
@@ -86,14 +107,9 @@ function PostCard({ post, onDelete, onUpdate, onLike, onComment }) {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInHours = (now - date) / (1000 * 60 * 60);
-
-    if (diffInHours < 1) {
-      return "Just now";
-    } else if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)}h ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
+    if (diffInHours < 1) return "Just now";
+    if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
+    return date.toLocaleDateString();
   };
 
   const formatTaggedUsers = (taggedUsers) => {
@@ -112,13 +128,15 @@ function PostCard({ post, onDelete, onUpdate, onLike, onComment }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 bg-white p-4 rounded-xl shadow-md">
       {/* Post Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
             <span className="text-white font-bold text-lg lg:text-xl">
-              {post.userId?.firstName?.[0] || post.userId?.lastName?.[0] || "U"}
+              {post.userId
+                ? post.userId.firstName?.[0] || post.userId.lastName?.[0] || "U"
+                : "U"}
             </span>
           </div>
           <div className="flex-1">
@@ -147,7 +165,6 @@ function PostCard({ post, onDelete, onUpdate, onLike, onComment }) {
             >
               <MoreVertical size={16} className="lg:w-5 lg:h-5 text-gray-600" />
             </button>
-            
             {showOptions && (
               <div className="absolute right-0 top-full mt-2 w-32 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-10">
                 <button
@@ -208,80 +225,32 @@ function PostCard({ post, onDelete, onUpdate, onLike, onComment }) {
             <p className="text-gray-800 text-sm lg:text-base leading-relaxed whitespace-pre-wrap">
               {post.content}
             </p>
-            
-            {/* Image Display */}
+
+            {/* Images */}
             {post.images && post.images.length > 0 && (
-              <div className="mt-4">
-                {post.images.length === 1 ? (
-                  // Single image - full width
-                  <div className="rounded-xl overflow-hidden">
+              <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl overflow-hidden">
+                {post.images.slice(0, 4).map((image, idx) => (
+                  <div key={idx} className="relative">
                     <img
-                      src={post.images[0]}
-                      alt="Post image"
-                      className="w-full max-h-96 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
-                      onClick={() => window.open(post.images[0], '_blank')}
+                      src={image}
+                      alt={`Post image ${idx + 1}`}
+                      className={`w-full ${
+                        idx === 3 ? "h-32" : "h-48"
+                      } object-cover hover:scale-105 transition-transform duration-300 cursor-pointer`}
+                      onClick={() => window.open(image, "_blank")}
                     />
-                  </div>
-                ) : post.images.length === 2 ? (
-                  // Two images - side by side
-                  <div className="grid grid-cols-2 gap-2 rounded-xl overflow-hidden">
-                    {post.images.map((image, index) => (
-                      <img
-                        key={index}
-                        src={image}
-                        alt={`Post image ${index + 1}`}
-                        className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
-                        onClick={() => window.open(image, '_blank')}
-                      />
-                    ))}
-                  </div>
-                ) : post.images.length === 3 ? (
-                  // Three images - 2 on top, 1 on bottom
-                  <div className="grid grid-cols-2 gap-2 rounded-xl overflow-hidden">
-                    <img
-                      src={post.images[0]}
-                      alt="Post image 1"
-                      className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
-                      onClick={() => window.open(post.images[0], '_blank')}
-                    />
-                    <img
-                      src={post.images[1]}
-                      alt="Post image 2"
-                      className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
-                      onClick={() => window.open(post.images[1], '_blank')}
-                    />
-                    <img
-                      src={post.images[2]}
-                      alt="Post image 3"
-                      className="col-span-2 w-full h-48 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
-                      onClick={() => window.open(post.images[2], '_blank')}
-                    />
-                  </div>
-                ) : (
-                  // Four or more images - grid layout
-                  <div className="grid grid-cols-2 gap-2 rounded-xl overflow-hidden">
-                    {post.images.slice(0, 4).map((image, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={image}
-                          alt={`Post image ${index + 1}`}
-                          className="w-full h-32 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
-                          onClick={() => window.open(image, '_blank')}
-                        />
-                        {index === 3 && post.images.length > 4 && (
-                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-xl">
-                            <span className="text-white text-lg font-bold">
-                              +{post.images.length - 4} more
-                            </span>
-                          </div>
-                        )}
+                    {idx === 3 && post.images.length > 4 && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-xl">
+                        <span className="text-white text-lg font-bold">
+                          +{post.images.length - 4} more
+                        </span>
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
+                ))}
               </div>
             )}
-            
+
             {formatTaggedUsers(post.taggedUsers) && (
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="text-xs lg:text-sm text-gray-500">Tagged:</span>
@@ -312,7 +281,7 @@ function PostCard({ post, onDelete, onUpdate, onLike, onComment }) {
                 : "text-gray-600 hover:text-red-500 hover:bg-red-50"
             }`}
           >
-            <Heart size={16} className={`lg:w-5 lg:h-5 ${isLiked ? "fill-current" : ""}`} />
+            <Heart size={16} className={`lg:w-5 lg:h-5 ${isLiked ? "text-red-500" : ""}`} />
             <span className="text-sm lg:text-base font-medium">{post.likes?.length || 0}</span>
           </button>
 
@@ -321,7 +290,7 @@ function PostCard({ post, onDelete, onUpdate, onLike, onComment }) {
             className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all duration-200 hover:scale-105"
           >
             <MessageCircle size={16} className="lg:w-5 lg:h-5" />
-            <span className="text-sm lg:text-base font-medium">{post.comments?.length || 0}</span>
+            <span className="text-sm lg:text-base font-medium">{localComments.length || 0}</span>
           </button>
         </div>
 
@@ -359,9 +328,9 @@ function PostCard({ post, onDelete, onUpdate, onLike, onComment }) {
           </div>
 
           {/* Comments List */}
-          {post.comments && post.comments.length > 0 ? (
+          {localComments.length > 0 ? (
             <div className="space-y-3">
-              {post.comments.map((comment) => (
+              {localComments.map((comment) => (
                 <div key={comment._id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-xl">
                   <div className="w-6 h-6 lg:w-8 lg:h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
                     <span className="text-white font-bold text-xs lg:text-sm">
