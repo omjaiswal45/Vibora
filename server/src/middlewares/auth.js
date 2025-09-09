@@ -14,7 +14,7 @@ const adminAuth = (req, res, next) =>{
   }
 };
 
-// user Auth....................................
+// user Auth.................................... before to create any token
 const userAuth = async (req, res, next) =>{
 try {
   //findout the token from res
